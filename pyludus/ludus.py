@@ -56,6 +56,7 @@ class Ludus:
             args=[command] + list(args) + kwargs,
             cwd=self.path,
             inherit_env=True,
+            aux_env=dict(PYTHONUNBUFFERED="x"),  # very important flag
             aux_paths=[self.script_dir, "/home/kani/.conda3/envs/apollo/bin"]
         )
 

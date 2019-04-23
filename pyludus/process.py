@@ -128,14 +128,14 @@ class Process:
         self.check_run()
         return self._stderr.read(n)
 
-    def readline(self, limit: int = None) -> bytes:
+    def readline(self, limit: int = -1) -> bytes:
         self.check_run()
         return self._process.stdout.readline(limit)
 
     def read_str(self, n: int = None, enc: str = "utf-8") -> str:
         return self.read(n).decode(enc)
 
-    def readline_str(self, limit: int = None, enc: str = "utf-8") -> str:
+    def readline_str(self, limit: int = -1, enc: str = "utf-8") -> str:
         return self.readline(limit).decode(enc)
 
     def write_str(self, data: str, enc: str = "utf-8") -> int:
