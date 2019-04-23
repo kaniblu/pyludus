@@ -1,14 +1,38 @@
 import os
 import sys
+import select
 import logging
 import subprocess
 from itertools import chain
 from dataclasses import dataclass
-from typing import Sequence, Mapping
+from typing import Sequence, Mapping, IO
 
 
 class ProcessError(Exception):
     pass
+
+
+@dataclass
+class NonBlockingReadingIO:
+    f: IO
+    buffer_size: int = 512
+    _poll: select.poll = None
+
+    def __post_init__(self):
+        self._poll = select.poll()
+        self._poll.register(self.f, select.POLLIN)
+
+    def read(self, n: int = None) -> bytes:
+        ret = b''
+        if n is None:
+            while self._poll.poll(1):
+                ret += os.read(self.f.fileno(), self.buffer_size)
+        else:
+            while self._poll.poll(1):
+                r = os.read(self.f.fileno(), min(self.buffer_size, n))
+                n -= len(r)
+                ret += r
+        return ret
 
 
 @dataclass
@@ -20,6 +44,7 @@ class Process:
     aux_paths: Sequence[str] = None
     _process: subprocess.Popen = None
     _logger: logging.Logger = None
+    _stderr: NonBlockingReadingIO = None
 
     def __post_init__(self):
         self._logger = logging.Logger(self.__class__.__name__)
@@ -47,6 +72,7 @@ class Process:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
+        self._stderr = NonBlockingReadingIO(self._process.stderr)
 
     def run_sync(self):
         self.open()
@@ -100,7 +126,7 @@ class Process:
 
     def read_error(self, n: int = None) -> bytes:
         self.check_run()
-        return self._process.stderr.read(n)
+        return self._stderr.read(n)
 
     def readline(self, limit: int = None) -> bytes:
         self.check_run()

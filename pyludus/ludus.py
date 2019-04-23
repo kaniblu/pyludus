@@ -56,7 +56,7 @@ class Ludus:
             args=[command] + list(args) + kwargs,
             cwd=self.path,
             inherit_env=True,
-            aux_paths=[self.script_dir]
+            aux_paths=[self.script_dir, "/home/kani/.conda3/envs/apollo/bin"]
         )
 
     def _create_instance(self, archetype,
@@ -139,9 +139,10 @@ class Ludus:
             instance, *commands,
             verbose=verbose, dry_run=dry_run
         )
-        with process:
+        process.open()
+        if proc_fn is not None:
             proc_fn(process)
-        ret = process.return_code()
+        ret = process.wait()
         if ret != 0:
             self.throw_script_error("instance-run",
                                     ret, process.read_error())
