@@ -15,7 +15,7 @@ class ProcessError(Exception):
 @dataclass
 class NonBlockingReadingIO:
     f: IO
-    buffer_size: int = 512
+    max_buffer_size: int = 2147483647
     _poll: select.poll = None
 
     def __post_init__(self):
@@ -23,16 +23,12 @@ class NonBlockingReadingIO:
         self._poll.register(self.f, select.POLLIN)
 
     def read(self, n: int = None) -> bytes:
-        ret = b''
-        if n is None:
-            while self._poll.poll(1):
-                ret += os.read(self.f.fileno(), self.buffer_size)
+        if self._poll.poll(1):
+            if n is None:
+                n = self.max_buffer_size
+            return os.read(self.f.fileno(), min(self.max_buffer_size, n))
         else:
-            while self._poll.poll(1):
-                r = os.read(self.f.fileno(), min(self.buffer_size, n))
-                n -= len(r)
-                ret += r
-        return ret
+            return b''
 
 
 @dataclass
